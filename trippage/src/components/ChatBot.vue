@@ -73,7 +73,7 @@ const sendMessage = async () => {
     const response = await axios.post(`${API_BASE}/api/chat`, {
       message: userText
     });
-    messages.value.push({ sender: 'bot', text: response.data.response || response.data });
+    messages.value.push({ sender: 'bot', text: response.data.answer || response.data });
   } catch (error) {
     messages.value.push({ sender: 'bot', text: '죄송합니다. 서버 통신 중 오류가 발생했습니다.' });
   } finally {
