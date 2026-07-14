@@ -65,24 +65,32 @@ onMounted(async () => {
 });
 
 const handleSubmit = async () => {
+  // 1. 빈 값이 있는지 먼저 검사 (하나라도 비어있으면 백엔드에서 422 에러 발생)
+  if (!form.value.title || !form.value.content || !form.value.author || !form.value.password) {
+    alert("모든 항목을 입력해 주세요.");
+    return;
+  }
+
+  // 2. 명세서(Body)에 적힌 딱 5개의 필드만 정확하게 객체로 빌드
+  const postPayload = {
+    title: form.value.title,
+    content: form.value.content,
+    author: form.value.author,
+    password: form.value.password, // 평문 비밀번호 
+    category: form.value.category || '구미/경북' // 누락 방지용 기본값 지정 
+  };
+
   try {
-    if (isEditMode.value) {
-      // PUT 연동 (비밀번호 검증 포함 요청)
-      await axios.put(`${API_BASE}/api/posts/${route.params.id}`, {
-        title: form.value.title,
-        content: form.value.content,
-        password: form.value.password
-      });
-      alert("수정 완료되었습니다.");
-    } else {
-      // POST 연동 (신규 저장)
-      await axios.post(`${API_BASE}/api/posts`, form.value);
-      alert("등록 완료되었습니다.");
+    // 3. 백엔드로 데이터 전송
+    const response = await axios.post(`${API_BASE}/api/posts`, postPayload);
+    
+    if (response.status === 201) { // 생성 성공 시 201 상태코드 반환 
+      alert("게시글이 성공적으로 등록되었습니다!");
+      router.push('/posts');
     }
-    router.push('/posts');
   } catch (error) {
-    console.error(error);
-    alert(error.response?.data?.detail || "비밀번호가 불일치하거나 처리 중 오류가 발생했습니다.");
+    console.error("등록 실패 로그:", error);
+    alert("서버 연결에 실패했거나 데이터 전송 오류가 발생했습니다.");
   }
 };
 </script>
