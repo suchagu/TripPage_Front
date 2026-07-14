@@ -1,26 +1,52 @@
 <template>
   <div class="map-wrapper">
-    <h3 class="map-title">📍 구미/경북 주요 관광 및 맛집 거점 지도</h3>
+    <div class="map-header">
+      <h3 class="map-title">📍 구미/경북 실시간 지역 정보 지도</h3>
+      <span v-if="loading" class="loading-badge">데이터 불러오는 중...</span>
+    </div>
     <div id="map-container" ref="mapContainer"></div>
   </div>
 </template>
 
 <script setup>
 import { ref, onMounted } from 'vue';
+import axios from 'axios';
 
 const mapContainer = ref(null);
 let mapInstance = null;
+const loading = ref(false);
 
-// 지도에 핀을 꽂을 구미 지역 주요 명소 리스트
-const localPlaces = ref([
-  { name: '금오산 도립공원', address: '경상북도 구미시 금오산상가길 419' },
-  { name: '구미시청', address: '경상북도 구미시 송정대로 55' },
-  { name: '구미역', address: '경상북도 구미시 구미중앙로 76' },
-  { name: '인동도시숲', address: '경상북도 구미시 인의동 1003' }
-]);
+// 백엔드에서 받아온 실제 장소 데이터를 담을 반응형 배열
+const localPlaces = ref([]);
 
-onMounted(() => {
-  // 💡 비동기 로딩 방어막: 카카오 라이브러리가 완전히 브라우저에 올라올 때까지 대기
+// 💡 1. 백엔드 서버에서 장소(공공데이터) 목록을 가져오는 함수
+const fetchPlacesFromBackend = async () => {
+  loading.value = true;
+  try {
+    // 백엔드 주소로 GET 요청을 보냅니다. (엔드포인트는 실제 백엔드 명세에 맞게 /api/places 등으로 조정하세요)
+    const response = await axios.get('https://localhub-backend-dev.onrender.com/api/data/places');
+    
+    // 백엔드가 반환하는 데이터 구조에 맞춰 파싱합니다.
+    // 예: { places: [...] } 구조인 경우 response.data.places, 바로 배열인 경우 response.data
+    localPlaces.value = response.data.places || response.data || [];
+  } catch (error) {
+    console.error("백엔드 데이터를 가져오지 못했습니다. 임시 기본값으로 대체합니다:", error);
+    // 폴백(Fallback) 안전장치: 서버 에러 시 보여줄 임시 데이터
+    localPlaces.value = [
+      { name: '금오산 도립공원', address: '경상북도 구미시 금오산상가길 419' },
+      { name: '구미시청', address: '경상북도 구미시 송정대로 55' },
+      { name: '구미역', address: '경상북도 구미시 구미중앙로 76' }
+    ];
+  } finally {
+    loading.value = false;
+  }
+};
+
+onMounted(async () => {
+  // 2. 먼저 백엔드로부터 데이터를 받아옵니다.
+  await fetchPlacesFromBackend();
+
+  // 3. 카카오 SDK 로드 상태를 체크한 뒤 지도를 그립니다.
   const checkKakaoLoad = () => {
     if (
       window.kakao && 
@@ -29,10 +55,8 @@ onMounted(() => {
       window.kakao.maps.Map && 
       window.kakao.maps.services
     ) {
-      // 모든 파일이 로드 완료되었다면 지도 초기화 실행
       initMap();
     } else {
-      // 로드 전이라면 100ms(0.1초) 대기 후 재귀 호출
       setTimeout(checkKakaoLoad, 100);
     }
   };
@@ -44,38 +68,37 @@ const initMap = () => {
   if (!mapContainer.value) return;
 
   try {
-    // 1. 지도 옵션 설정 (중심 좌표: 구미시청 부근)
+    const { maps } = window.kakao;
+
     const options = {
-      center: new kakao.maps.LatLng(36.119485, 128.344435),
-      level: 7 // 지도 확대 정도
+      center: new maps.LatLng(36.119485, 128.344435), // 기본 중심지 (구미시청)
+      level: 7
     };
 
-    // 2. 지도 인스턴스 생성
-    mapInstance = new kakao.maps.Map(mapContainer.value, options);
+    // 지도 생성
+    mapInstance = new maps.Map(mapContainer.value, options);
+    const geocoder = new maps.services.Geocoder();
 
-    // 3. 주소를 위도/경도로 바꿔주는 Geocoder 생성
-    const geocoder = new kakao.maps.services.Geocoder();
-
-    // 4. 주소 목록을 돌며 지도 위에 핀(마커) 생성
+    // 4. 백엔드에서 받아온 데이터(localPlaces)를 기반으로 마커를 동적 생성합니다.
     localPlaces.value.forEach((place) => {
-      // 주소가 유효하지 않은 항목은 사전에 안전하게 패스 (에러 방지)
+      // 데이터 검증: 장소명과 주소가 모두 유효해야 실행
       if (!place || !place.address || typeof place.address !== 'string' || place.address.trim() === '') {
         return; 
       }
 
       geocoder.addressSearch(place.address.trim(), (result, status) => {
-        if (status === kakao.maps.services.Status.OK) {
-          const coords = new kakao.maps.LatLng(result[0].y, result[0].x);
+        if (status === maps.services.Status.OK) {
+          const coords = new maps.LatLng(result[0].y, result[0].x);
 
-          // 마커 찍기
-          const marker = new kakao.maps.Marker({
+          // 마커 생성
+          const marker = new maps.Marker({
             map: mapInstance,
             position: coords
           });
 
-          // 마우스 올렸을 때 표시할 정보창(인포윈도우) 구성
+          // 상호명 및 주소 정보창 구성
           const shortenedAddress = place.address.split(' ').slice(0, 3).join(' ');
-          const infowindow = new kakao.maps.InfoWindow({
+          const infowindow = new maps.InfoWindow({
             content: `
               <div style="padding:8px; min-width:150px; font-size:13px; text-align:center; color:#333; line-height: 1.4;">
                 <strong style="color:#2b6cb0;">${place.name}</strong><br/>
@@ -84,18 +107,18 @@ const initMap = () => {
             `
           });
 
-          // 마우스 오버 / 아웃 이벤트 등록
-          kakao.maps.event.addListener(marker, 'mouseover', () => {
+          // 마우스 오버/아웃 이벤트 바인딩
+          maps.event.addListener(marker, 'mouseover', () => {
             infowindow.open(mapInstance, marker);
           });
-          kakao.maps.event.addListener(marker, 'mouseout', () => {
+          maps.event.addListener(marker, 'mouseout', () => {
             infowindow.close();
           });
         }
       });
     });
   } catch (err) {
-    console.error("지도 초기화 과정 내부 치명적 에러:", err);
+    console.error("지도 마킹 과정 중 에러 발생:", err);
   }
 };
 </script>
@@ -109,15 +132,29 @@ const initMap = () => {
   border: 1px solid #edf2f7;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03);
 }
+.map-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+}
 .map-title {
   font-size: 1.25rem;
   font-weight: 700;
-  margin-bottom: 1rem;
+  margin: 0;
   color: #2d3748;
+}
+.loading-badge {
+  font-size: 0.85rem;
+  background: #ebf8ff;
+  color: #2b6cb0;
+  padding: 0.25rem 0.6rem;
+  border-radius: 50px;
+  font-weight: 600;
 }
 #map-container {
   width: 100%;
-  height: 480px; /* 지도의 높이 설정 */
+  height: 480px;
   border-radius: 12px;
   border: 1px solid #e2e8f0;
 }
