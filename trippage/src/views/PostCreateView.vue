@@ -90,6 +90,7 @@ const handleSubmit = async () => {
     }
   } catch (error) {
     console.error("등록 실패 로그:", error);
+    console.log(`${API_BASE}`, error.response?.data);
     alert("서버 연결에 실패했거나 데이터 전송 오류가 발생했습니다.");
   }
 };
