@@ -33,9 +33,9 @@ const fetchPlacesFromBackend = async () => {
     console.error("백엔드 데이터를 가져오지 못했습니다. 임시 기본값으로 대체합니다:", error);
     // 폴백(Fallback) 안전장치: 서버 에러 시 보여줄 임시 데이터
     localPlaces.value = [
-      { name: '금오산 도립공원', address: '경상북도 구미시 금오산상가길 419' },
-      { name: '구미시청', address: '경상북도 구미시 송정대로 55' },
-      { name: '구미역', address: '경상북도 구미시 구미중앙로 76' }
+      { title: '금오산 도립공원', address: '경상북도 구미시 금오산상가길 419' },
+      { title: '구미시청', address: '경상북도 구미시 송정대로 55' },
+      { title: '구미역', address: '경상북도 구미시 구미중앙로 76' }
     ];
   } finally {
     loading.value = false;
@@ -101,7 +101,7 @@ const initMap = () => {
           const infowindow = new maps.InfoWindow({
             content: `
               <div style="padding:8px; min-width:150px; font-size:13px; text-align:center; color:#333; line-height: 1.4;">
-                <strong style="color:#2b6cb0;">${place.name}</strong><br/>
+                <strong style="color:#2b6cb0;">${place.title}</strong><br/>
                 <span style="font-size:11px; color:#666; display:inline-block; margin-top:4px;">${shortenedAddress}</span>
               </div>
             `

@@ -5,7 +5,7 @@
       <router-link to="/posts/write" class="btn-primary">✏️ 글쓰기</router-link>
     </div>
 
-    <div class="filter-bar">
+    <!-- <div class="filter-bar">
       <input 
         v-model="searchQuery" 
         type="text" 
@@ -13,7 +13,7 @@
         @keyup.enter="fetchPosts(1)"
       />
       <button @click="fetchPosts(1)" class="btn-secondary">검색</button>
-    </div>
+    </div> -->
 
     <table class="post-table">
       <thead>
