@@ -78,7 +78,9 @@ const confirmAction = async () => {
       password: passwordInput.value
     });
 
-    if (verifyRes.data === true) {
+    //console.log("비밀번호 검증 결과:", verifyRes.data.verified);
+
+    if (verifyRes.data.verified === true) {
       showModal.value = false;
       if (currentAction.value === 'edit') {
         // 수정 화면으로 라우팅 (수정 폼 내 이중 검증용 패스워드 활용 전략)
