@@ -68,7 +68,7 @@ const fetchPosts = async (page = 1) => {
         page: page,
         limit: limit,
         //category: '구미/경북',
-        search: searchQuery.value // 백엔드 스펙에 맞춰 추가 구현 가능
+        //search: searchQuery.value // 백엔드 스펙에 맞춰 추가 구현 가능
       }
     });
     posts.value = response.data.posts || [];
