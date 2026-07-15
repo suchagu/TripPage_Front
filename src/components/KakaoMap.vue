@@ -70,7 +70,7 @@ const fetchPlacesFromBackend = async () => {
     
     // 💡 받아온 모든 데이터를 변형 없이 원본 상태로 보관합니다.
     allPlaces.value = response.data.places || response.data || [];
-    console.log("백엔드 첫번째 장소 데이터 구조:", allPlaces.value[0]);
+    //console.log("백엔드 첫번째 장소 데이터 구조:", allPlaces.value[0]);
   } catch (error) {
     console.error("백엔드 데이터를 가져오지 못했습니다. 임시 기본값으로 대체합니다:", error);
     // 폴백(Fallback) 안전장치: 다양한 content_type을 임베딩한 임시 더미 데이터 구성
