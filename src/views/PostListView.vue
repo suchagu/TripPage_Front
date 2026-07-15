@@ -71,7 +71,14 @@ const fetchPosts = async (page = 1) => {
         //search: searchQuery.value // 백엔드 스펙에 맞춰 추가 구현 가능
       }
     });
-    posts.value = response.data.posts || [];
+
+    // 💡 백엔드에서 받아온 배열을 가져옵니다.
+    const rawPosts = response.data.posts || [];
+    
+    // 💡 자바스크립트로 최신글(created_at이 큰 날짜)이 위로 오도록 내림차순 정렬
+    rawPosts.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+
+    posts.value = rawPosts;
     totalPages.value = response.data.total_pages || 1;
   } catch (error) {
     console.error("게시글 목록 로드 실패:", error);
