@@ -90,7 +90,25 @@ const sendMessage = async () => {
 .chat-header { background: #2b6cb0; color: white; padding: 1rem; }
 .chat-header h4 { margin: 0; }
 .chat-body { flex: 1; padding: 1rem; overflow-y: auto; background: #f7fafc; display: flex; flex-direction: column; gap: 0.8rem; }
-.chat-bubble { max-width: 80%; padding: 0.7rem 1rem; border-radius: 8px; font-size: 0.95rem; line-height: 1.4; }
+.chat-bubble { 
+  max-width: 80%; 
+  padding: 0.7rem 1rem; 
+  border-radius: 8px; 
+  font-size: 0.95rem; 
+  line-height: 1.4; 
+
+  /* 💡 긴 텍스트를 영역 내에서 알아서 내려가도록 해주는 속성 추가 */
+  white-space: pre-wrap;     /* 백엔드 답변 내의 개행문자(\n)도 정상적으로 줄바꿈하여 보여줍니다. */
+  word-break: break-all;     /* 긴 주소 링크(URL)나 영어 단어가 들어와도 잘리지 않고 알아서 밑으로 내립니다. */
+  overflow-wrap: break-word; /* 텍스트가 박스 한계치에 다다르면 단어 단위로 줄을 넘깁니다. */
+}
+
+/* 💡 <p> 태그의 브라우저 기본 위아래 마진(여백)을 제거하고 영역 안에서 예쁘게 정렬합니다. */
+.chat-bubble p {
+  margin: 0;
+  word-break: break-all;
+  white-space: pre-wrap;
+}
 .chat-bubble.bot { background: white; align-self: flex-start; border: 1px solid #e2e8f0; }
 .chat-bubble.user { background: #bee3f8; color: #2b6cb0; align-self: flex-end; }
 .chat-bubble.loading { color: #a0aec0; font-style: italic; }
