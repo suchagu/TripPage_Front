@@ -16,69 +16,85 @@
       </button>
     </div>
 
-    <div id="map-container" ref="mapContainer"></div>
+    <div class="map-container-wrapper">
+      <div id="map-container" ref="mapContainer"></div>
+
+      <div class="side-detail-panel" v-if="selectedPlace">
+        <div class="panel-image-wrapper">
+          <img class="panel-img" :src="selectedPlace.image_url || selectedPlace.imageUrl || 'https://placehold.co/400x250?text=No+Image'" :alt="selectedPlace.title" />
+          <span class="panel-badge">{{ selectedPlace.content_type || '정보' }}</span>
+          <button class="panel-close-btn" @click="closeDetail" title="닫기">×</button>
+        </div>
+        <div class="panel-body">
+          <h4 class="panel-title">{{ selectedPlace.title }}</h4>
+          <p class="panel-address">{{ selectedPlace.address }}</p>
+          <div class="panel-description">
+            <p>💡 선택하신 장소의 상세 정보입니다. 실시간 도로명 주소 위치로 지도가 이동되었습니다.</p>
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
 <script setup>
-import { ref, onMounted, computed } from 'vue'; // 💡 동적 탭 관리를 위해 computed 임포트
+import { ref, onMounted, computed } from 'vue';
 import axios from 'axios';
 
 const mapContainer = ref(null);
 let mapInstance = null;
 const loading = ref(false);
 
-// 💡 [에러 해결 1] 백엔드에서 받아온 전체 장소 원본 데이터를 영구 보존할 반응형 배열
 const allPlaces = ref([]);
-
-// 💡 [에러 해결 2] 지도 위에 생성된 카카오 마커 객체들을 저장할 배열 (카테고리 이동 시 기존 마커 삭제용)
 const currentMarkers = ref([]);
-
-// 현재 활성화된 카테고리 (기본값 'ALL')
 const currentCategory = ref('ALL');
 
-// 💡 [핵심 기능] 데이터에 담겨오는 content_type에 따라 동적으로 카테고리 탭 추출
+// 💡 현재 사용자가 마커를 클릭해 선택한 장소 정보를 저장하는 반응형 상태 변수
+const selectedPlace = ref(null);
+
+// 카테고리 자동 추출 목록
 const categoryList = computed(() => {
   const list = [{ label: '전체', value: 'ALL' }];
-  
   if (!allPlaces.value || allPlaces.value.length === 0) return list;
 
-  // 1. place 데이터에서 content_type만 맵핑하고, 빈 값이거나 null 인 것 필터링
   const types = allPlaces.value
-    .map(place => place.content_type)
+    .map(place => place.content_type || place.content_Type || place.contentType)
     .filter(type => type && type.trim() !== '');
 
-  // 2. Set 객체를 이용해 중복 제거 (예: ['관광지', '관광지', '맛집'] -> ['관광지', '맛집'])
   const uniqueTypes = [...new Set(types)];
-
-  // 3. 버튼 리스트 포맷에 맞게 데이터 파싱하여 추가
   uniqueTypes.forEach(type => {
-    list.push({
-      label: type, 
-      value: type  
-    });
+    list.push({ label: type, value: type });
   });
 
   return list;
 });
 
-// 백엔드 서버에서 장소(공공데이터) 목록을 가져오는 함수
 const fetchPlacesFromBackend = async () => {
   loading.value = true;
   try {
     const response = await axios.get('https://localhub-backend-dev.onrender.com/api/data/places');
-    
-    // 💡 받아온 모든 데이터를 변형 없이 원본 상태로 보관합니다.
     allPlaces.value = response.data.places || response.data || [];
-    //console.log("백엔드 첫번째 장소 데이터 구조:", allPlaces.value[0]);
   } catch (error) {
     console.error("백엔드 데이터를 가져오지 못했습니다. 임시 기본값으로 대체합니다:", error);
-    // 폴백(Fallback) 안전장치: 다양한 content_type을 임베딩한 임시 더미 데이터 구성
     allPlaces.value = [
-      { title: '금오산 도립공원', address: '경상북도 구미시 금오산상가길 419', content_type: '관광지' },
-      { title: '구미시청', address: '경상북도 구미시 송정대로 55', content_type: '관광지' },
-      { title: '구미역 맛집거리', address: '경상북도 구미시 구미중앙로 76', content_type: '맛집' },
-      { title: '인동도시숲 예쁜카페', address: '경상북도 구미시 인의동 1003', content_type: '카페' }
+      { 
+        title: '금오산 도립공원', 
+        address: '경상북도 구미시 금오산상가길 419', 
+        content_type: '관광지',
+        image_url: 'https://images.unsplash.com/photo-1501854140801-50d01698950b?auto=format&fit=crop&w=400&q=80' 
+      },
+      { 
+        title: '구미시청', 
+        address: '경상북도 구미시 송정대로 55', 
+        content_type: '관광지',
+        image_url: 'https://images.unsplash.com/photo-1577083552431-6e5fd01aa342?auto=format&fit=crop&w=400&q=80' 
+      },
+      { 
+        title: '구미역 맛집거리', 
+        address: '경상북도 구미시 구미중앙로 76', 
+        content_type: '맛집',
+        image_url: 'https://images.unsplash.com/photo-1555396273-367ea4eb4db5?auto=format&fit=crop&w=400&q=80' 
+      }
     ];
   } finally {
     loading.value = false;
@@ -86,10 +102,8 @@ const fetchPlacesFromBackend = async () => {
 };
 
 onMounted(async () => {
-  // 1. 데이터를 먼저 가지고 오고 난 뒤에 지도를 그립니다.
   await fetchPlacesFromBackend();
 
-  // 2. 카카오 지도 라이브러리가 로드되었는지 최종 확인
   const checkKakaoLoad = () => {
     if (
       window.kakao && 
@@ -112,39 +126,35 @@ const initMap = () => {
 
   try {
     const { maps } = window.kakao;
-
     const options = {
-      center: new maps.LatLng(36.119485, 128.344435), // 기본 중심지 (구미시청)
+      center: new maps.LatLng(36.119485, 128.344435),
       level: 7
     };
 
     mapInstance = new maps.Map(mapContainer.value, options);
-    
-    // 💡 최초 로딩 시 지도 위에 마커들을 출력합니다.
-    updateMarkers();
+    updateMarkers(); 
   } catch (err) {
     console.error("지도 초기화 과정 중 에러 발생:", err);
   }
 };
 
-// 💡 [에러 해결 3] 동적 카테고리 필터링 마커를 갱신하는 코어 함수
 const updateMarkers = () => {
   if (!mapInstance) return;
   const { maps } = window.kakao;
 
-  // ① 지도 위에 이미 그려져 있는 이전 마커들을 싹 다 지워서 잔상을 제거합니다.
+  // 기존 마커 삭제 및 선택창 초기화
   currentMarkers.value.forEach(marker => marker.setMap(null));
-  currentMarkers.value = []; // 관리 배열 청소
+  currentMarkers.value = [];
+  selectedPlace.value = null;
 
-  // ② 전체 데이터(allPlaces) 중 현재 탭 카테고리와 일치하는 장소만 분리합니다.
   const filteredPlaces = allPlaces.value.filter(place => {
     if (currentCategory.value === 'ALL') return true;
-    return place.content_type === currentCategory.value;
+    const type = place.content_type || place.content_Type || place.contentType;
+    return type === currentCategory.value;
   });
 
   const geocoder = new maps.services.Geocoder();
 
-  // ③ 필터링된 장소들만 반복하며 마커를 다시 생성합니다.
   filteredPlaces.forEach((place) => {
     if (!place || !place.address || typeof place.address !== 'string' || place.address.trim() === '') {
       return; 
@@ -154,43 +164,33 @@ const updateMarkers = () => {
       if (status === maps.services.Status.OK) {
         const coords = new maps.LatLng(result[0].y, result[0].x);
 
-        // 마커 생성
         const marker = new maps.Marker({
           map: mapInstance,
           position: coords
         });
 
-        // 생성한 마커 인스턴스를 보관해 둡니다 (나중에 카테고리가 바뀔 때 지울 목적)
         currentMarkers.value.push(marker);
 
-        // 정보창(InfoWindow) 구성
-        const shortenedAddress = place.address.split(' ').slice(0, 3).join(' ');
-        const infowindow = new maps.InfoWindow({
-          content: `
-            <div style="padding:8px; min-width:150px; font-size:13px; text-align:center; color:#333; line-height: 1.4;">
-              <span style="font-size:10px; background:#edf2f7; padding:2px 5px; border-radius:3px; color:#4a5568;">${place.content_type || '정보'}</span><br/>
-              <strong style="color:#2b6cb0; display:inline-block; margin-top:4px;">${place.title}</strong><br/>
-              <span style="font-size:11px; color:#666; display:inline-block; margin-top:2px;">${shortenedAddress}</span>
-            </div>
-          `
-        });
-
-        // 마우스 오버/아웃 이벤트 바인딩
-        maps.event.addListener(marker, 'mouseover', () => {
-          infowindow.open(mapInstance, marker);
-        });
-        maps.event.addListener(marker, 'mouseout', () => {
-          infowindow.close();
+        // 💡 마커 클릭 시, 지도 위에 팝업을 띄우는 대신 우측 상태창(selectedPlace)에 장소 할당
+        maps.event.addListener(marker, 'click', () => {
+          selectedPlace.value = place;
+          
+          // 조금 더 왼쪽으로 지도를 옮겨 팝업과 겹치지 않게 조절 가능 (여기선 중심 이동)
+          mapInstance.panTo(coords);
         });
       }
     });
   });
 };
 
-// 💡 [에러 해결 4] 탭을 눌렀을 때 실행되는 컨트롤러 함수
+// 상세창 닫기 함수
+const closeDetail = () => {
+  selectedPlace.value = null;
+};
+
 const changeCategory = (categoryValue) => {
-  currentCategory.value = categoryValue; // 1. 현재 선택 카테고리값 갱신
-  updateMarkers(); // 2. 바뀐 데이터로 마커 다시 그리기 지시
+  currentCategory.value = categoryValue;
+  updateMarkers();
 };
 </script>
 
@@ -224,7 +224,6 @@ const changeCategory = (categoryValue) => {
   font-weight: 600;
 }
 
-/* 💡 카테고리 탭 스타일 코드 */
 .category-tabs {
   display: flex;
   gap: 0.5rem;
@@ -251,10 +250,121 @@ const changeCategory = (categoryValue) => {
   border-color: #2b6cb0;
 }
 
+/* 지도와 사이드 패널을 감싸는 상대 위치 영역 */
+.map-container-wrapper {
+  position: relative;
+  width: 100%;
+  height: 550px; /* 상세창 크기를 확보하기 위해 높이를 조금 늘림 */
+  border-radius: 12px;
+  overflow: hidden;
+  border: 1px solid #e2e8f0;
+}
+
 #map-container {
   width: 100%;
-  height: 480px;
-  border-radius: 12px;
-  border: 1px solid #e2e8f0;
+  height: 100%;
+}
+
+/* 💡 화면의 약 4분의 1(280px ~ 300px)을 차지하는 우측 고정 상세 패널 */
+.side-detail-panel {
+  position: absolute;
+  top: 15px;
+  right: 15px;
+  bottom: 15px;
+  width: 28% ; /* 전체 지도 너비의 약 1/4 이상을 차지하도록 설정 */
+  min-width: 260px;
+  max-width: 340px;
+  background: #ffffff;
+  border-radius: 14px;
+  box-shadow: -5px 0 25px rgba(0, 0, 0, 0.15), 0 5px 10px rgba(0, 0, 0, 0.05);
+  z-index: 10;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  animation: slideIn 0.3s ease-out;
+}
+
+@keyframes slideIn {
+  from { transform: translateX(30px); opacity: 0; }
+  to { transform: translateX(0); opacity: 1; }
+}
+
+.panel-image-wrapper {
+  position: relative;
+  width: 100%;
+  height: 160px;
+  background-color: #f7fafc;
+}
+.panel-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.panel-badge {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #ffffff;
+  background: #2b6cb0;
+  padding: 4px 10px;
+  border-radius: 50px;
+}
+.panel-close-btn {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  background: rgba(255, 255, 255, 0.9);
+  border: none;
+  font-size: 1.35rem;
+  font-weight: bold;
+  color: #2d3748;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+  transition: all 0.2s;
+}
+.panel-close-btn:hover {
+  background: #ffffff;
+  transform: scale(1.05);
+}
+
+.panel-body {
+  padding: 16px;
+  text-align: left;
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  overflow-y: auto; /* 내용이 너무 많으면 스크롤 생성 */
+}
+.panel-title {
+  font-size: 1.15rem;
+  font-weight: 800;
+  color: #1a202c;
+  margin: 0 0 8px 0;
+  line-height: 1.4;
+}
+.panel-address {
+  font-size: 0.85rem;
+  color: #4a5568;
+  margin: 0 0 16px 0;
+  line-height: 1.5;
+  background: #f7fafc;
+  padding: 8px 12px;
+  border-radius: 6px;
+  border: 1px solid #edf2f7;
+}
+.panel-description {
+  font-size: 0.8rem;
+  color: #718096;
+  line-height: 1.6;
+  border-top: 1px dashed #e2e8f0;
+  padding-top: 12px;
 }
 </style>
