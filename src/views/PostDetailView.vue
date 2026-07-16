@@ -5,7 +5,11 @@
       <h2>{{ post.title }}</h2>
       <div class="post-meta">
         <span>작성자: <strong>{{ post.author }}</strong></span> | 
-        <span>{{ new Date(post.created_at).toLocaleString() }}</span>
+        <span>작성일: {{ new Date(post.created_at).toLocaleString() }}</span>
+        
+        <span v-if="post.updated_at" class="updated-time">
+          | <strong class="edit-badge">(수정됨)</strong> {{ new Date(post.updated_at).toLocaleString() }}
+        </span>
       </div>
     </div>
     
@@ -39,7 +43,6 @@
 import { ref, onMounted } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import axios from 'axios';
-
 
 const route = useRoute();
 const router = useRouter();
@@ -79,13 +82,10 @@ const confirmAction = async () => {
       password: passwordInput.value
     });
 
-    //console.log("비밀번호 검증 결과:", verifyRes.data.verified);
-
     if (verifyRes.data.verified === true) {
       showModal.value = false;
       if (currentAction.value === 'edit') {
         // 수정 화면으로 라우팅 (수정 폼 내 이중 검증용 패스워드 활용 전략)
-        // router.push(`/posts/${route.params.id}/edit`);
         router.push({ path: `/posts/${route.params.id}/edit`, query: { verifiedPassword : passwordInput.value }   });
         
       } else if (currentAction.value === 'delete') {
@@ -114,6 +114,16 @@ onMounted(fetchPostDetail);
 .category-badge { background: #ebf8ff; color: #2b6cb0; font-size: 0.85rem; padding: 0.2rem 0.6rem; border-radius: 4px; font-weight: bold; }
 .detail-header { border-bottom: 2px solid var(--border-color); padding-bottom: 1rem; margin-bottom: 2rem; }
 .post-meta { color: #718096; font-size: 0.9rem; margin-top: 0.5rem; }
+
+/* 💡 수정됨 배지 강조를 위한 간단한 CSS 스타일 추가 */
+.edit-badge {
+  color: #dd6b20;
+  font-weight: bold;
+}
+.updated-time {
+  margin-left: 5px;
+}
+
 .detail-content { min-height: 250px; line-height: 1.7; font-size: 1.1rem; white-space: pre-wrap; }
 .detail-actions { display: flex; justify-content: space-between; border-top: 1px solid var(--border-color); padding-top: 1.5rem; margin-top: 2rem; }
 .btn-list { background: #cbd5e0; border: none; padding: 0.6rem 1.2rem; border-radius: 4px; cursor: pointer; }
