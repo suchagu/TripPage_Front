@@ -7,7 +7,7 @@
 
     <div class="chat-window" v-if="isOpen">
       <div class="chat-header">
-        <h4>🤖 구미/경북 스마트 안내원</h4>
+        <h4>🤖 구미/경북 스마트 챗봇</h4>
       </div>
       
       <div class="chat-body" ref="chatBody">
@@ -23,7 +23,7 @@
         <input 
           v-model="inputMsg" 
           type="text" 
-          placeholder="구미 축제나 맛집에 대해 물어보세요!" 
+          placeholder="구미/경북 축제나 맛집에 대해 물어보세요!" 
           @keyup.enter="sendMessage"
           :disabled="isLoading"
         />
@@ -44,7 +44,9 @@ const chatBody = ref(null);
 const API_BASE = import.meta.env.VITE_API_BASE_URL;
 
 const messages = ref([
-  { sender: 'bot', text: '안녕하세요! 공공데이터 기반 구미/경북 가이드 LocalHub 챗봇입니다. 어떤 정보가 필요하신가요?' }
+  // { sender: 'bot', text: '안녕하세요! 공공데이터 기반 구미/경북 가이드 LocalHub 챗봇입니다. 어떤 정보가 필요하신가요?' }
+  { sender: 'bot', text: '반갑습니다! 구미/경북의 축제, 맛집, 추천 명소까지 알차게 안내하는 여행 메이트 LocalHub입니다. 어떤 정보가 궁금하신가요? 😊' }
+  
 ]);
 
 const toggleChat = () => {
