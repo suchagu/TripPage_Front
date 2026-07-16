@@ -49,7 +49,7 @@ const allPlaces = ref([]);
 const currentMarkers = ref([]);
 const currentCategory = ref('ALL');
 
-// 💡 현재 사용자가 마커를 클릭해 선택한 장소 정보를 저장하는 반응형 상태 변수
+// 현재 사용자가 마커를 클릭해 선택한 장소 정보를 저장하는 반응형 상태 변수
 const selectedPlace = ref(null);
 
 // 카테고리 자동 추출 목록
@@ -81,19 +81,25 @@ const fetchPlacesFromBackend = async () => {
         title: '금오산 도립공원', 
         address: '경상북도 구미시 금오산상가길 419', 
         content_type: '관광지',
-        image_url: 'https://images.unsplash.com/photo-1501854140801-50d01698950b?auto=format&fit=crop&w=400&q=80' 
+        image_url: 'https://images.unsplash.com/photo-1501854140801-50d01698950b?auto=format&fit=crop&w=400&q=80',
+        mapy: 36.119485,
+        mapx: 128.344435
       },
       { 
         title: '구미시청', 
         address: '경상북도 구미시 송정대로 55', 
         content_type: '관광지',
-        image_url: 'https://images.unsplash.com/photo-1577083552431-6e5fd01aa342?auto=format&fit=crop&w=400&q=80' 
+        image_url: 'https://images.unsplash.com/photo-1577083552431-6e5fd01aa342?auto=format&fit=crop&w=400&q=80',
+        mapy: 36.119642,
+        mapx: 128.346251
       },
       { 
         title: '구미역 맛집거리', 
         address: '경상북도 구미시 구미중앙로 76', 
         content_type: '맛집',
-        image_url: 'https://images.unsplash.com/photo-1555396273-367ea4eb4db5?auto=format&fit=crop&w=400&q=80' 
+        image_url: 'https://images.unsplash.com/photo-1555396273-367ea4eb4db5?auto=format&fit=crop&w=400&q=80',
+        mapy: 36.128452,
+        mapx: 128.330833
       }
     ];
   } finally {
@@ -138,6 +144,7 @@ const initMap = () => {
   }
 };
 
+// 💡 [완전 최적화 적용] 백엔드 좌표 데이터를 기반으로 동기식 마커 생성
 const updateMarkers = () => {
   if (!mapInstance) return;
   const { maps } = window.kakao;
@@ -153,32 +160,31 @@ const updateMarkers = () => {
     return type === currentCategory.value;
   });
 
-  const geocoder = new maps.services.Geocoder();
-
+  // 🟢 네트워크 통신(Geocoder)을 완벽히 제거하여 버벅임 및 429 에러의 원인을 근본적으로 해결
   filteredPlaces.forEach((place) => {
-    if (!place || !place.address || typeof place.address !== 'string' || place.address.trim() === '') {
+    // 백엔드가 제공하는 위도(mapy)와 경도(mapx) 추출
+    const lat = Number(place.mapy || place.mapY);
+    const lng = Number(place.mapx || place.mapX);
+
+    // 좌표값 유효성 검사
+    if (!lat || !lng || isNaN(lat) || isNaN(lng)) {
       return; 
     }
 
-    geocoder.addressSearch(place.address.trim(), (result, status) => {
-      if (status === maps.services.Status.OK) {
-        const coords = new maps.LatLng(result[0].y, result[0].x);
+    // 통신 딜레이 없이 그 즉시 좌표 인스턴스 생성
+    const coords = new maps.LatLng(lat, lng);
 
-        const marker = new maps.Marker({
-          map: mapInstance,
-          position: coords
-        });
+    const marker = new maps.Marker({
+      map: mapInstance,
+      position: coords
+    });
 
-        currentMarkers.value.push(marker);
+    currentMarkers.value.push(marker);
 
-        // 💡 마커 클릭 시, 지도 위에 팝업을 띄우는 대신 우측 상태창(selectedPlace)에 장소 할당
-        maps.event.addListener(marker, 'click', () => {
-          selectedPlace.value = place;
-          
-          // 조금 더 왼쪽으로 지도를 옮겨 팝업과 겹치지 않게 조절 가능 (여기선 중심 이동)
-          mapInstance.panTo(coords);
-        });
-      }
+    // 마커 클릭 시 우측 상세창에 장소 할당 및 지도 중심 이동
+    maps.event.addListener(marker, 'click', () => {
+      selectedPlace.value = place;
+      mapInstance.panTo(coords);
     });
   });
 };
@@ -250,11 +256,10 @@ const changeCategory = (categoryValue) => {
   border-color: #2b6cb0;
 }
 
-/* 지도와 사이드 패널을 감싸는 상대 위치 영역 */
 .map-container-wrapper {
   position: relative;
   width: 100%;
-  height: 550px; /* 상세창 크기를 확보하기 위해 높이를 조금 늘림 */
+  height: 550px;
   border-radius: 12px;
   overflow: hidden;
   border: 1px solid #e2e8f0;
@@ -265,13 +270,12 @@ const changeCategory = (categoryValue) => {
   height: 100%;
 }
 
-/* 💡 화면의 약 4분의 1(280px ~ 300px)을 차지하는 우측 고정 상세 패널 */
 .side-detail-panel {
   position: absolute;
   top: 15px;
   right: 15px;
   bottom: 15px;
-  width: 28% ; /* 전체 지도 너비의 약 1/4 이상을 차지하도록 설정 */
+  width: 28% ;
   min-width: 260px;
   max-width: 340px;
   background: #ffffff;
@@ -341,7 +345,7 @@ const changeCategory = (categoryValue) => {
   display: flex;
   flex-direction: column;
   flex: 1;
-  overflow-y: auto; /* 내용이 너무 많으면 스크롤 생성 */
+  overflow-y: auto;
 }
 .panel-title {
   font-size: 1.15rem;
