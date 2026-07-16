@@ -40,6 +40,7 @@ import { ref, onMounted } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import axios from 'axios';
 
+
 const route = useRoute();
 const router = useRouter();
 const API_BASE = import.meta.env.VITE_API_BASE_URL;
@@ -84,7 +85,9 @@ const confirmAction = async () => {
       showModal.value = false;
       if (currentAction.value === 'edit') {
         // 수정 화면으로 라우팅 (수정 폼 내 이중 검증용 패스워드 활용 전략)
-        router.push(`/posts/${route.params.id}/edit`);
+        // router.push(`/posts/${route.params.id}/edit`);
+        router.push({ path: `/posts/${route.params.id}/edit`, query: { verifiedPassword : passwordInput.value }   });
+        
       } else if (currentAction.value === 'delete') {
         // 실제 삭제 요청 실행
         if (confirm("정말 이 글을 삭제하시겠습니까?")) {

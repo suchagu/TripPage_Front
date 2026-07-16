@@ -9,7 +9,7 @@
 
       <div class="form-group">
         <label>글 비밀번호</label>
-        <input v-model="form.password" type="password" placeholder="수정/삭제용 비밀번호 입력" required />
+        <input v-model="form.password" type="password" placeholder="수정/삭제용 비밀번호 입력" :disabled="isEditMode" required />
       </div>
 
       <div class="form-group">
@@ -55,9 +55,14 @@ onMounted(async () => {
     try {
       const response = await axios.get(`${API_BASE}/api/posts/${route.params.id}`);
       form.value.title = response.data.title;
+      form.value.password = response.data.password;
       form.value.content = response.data.content;
       form.value.author = response.data.author;
-    } catch (error) {
+      if(route.query.verifiedPassword) {
+        form.value.password = route.query.verifiedPassword;
+      }
+    } 
+    catch (error) {
       alert("데이터를 가져오는 데 실패했습니다.");
       router.back();
     }
@@ -80,18 +85,36 @@ const handleSubmit = async () => {
     category: form.value.category || '구미/경북' // 누락 방지용 기본값 지정 
   };
 
+   const putPayload = {
+    title: form.value.title,
+    content: form.value.content,
+    password: form.value.password, // 평문 비밀번호 
+  };
+
   try {
-    // 3. 백엔드로 데이터 전송
-    const response = await axios.post(`${API_BASE}/api/posts`, postPayload);
     
-    if (response.status === 201) { // 생성 성공 시 201 상태코드 반환 
-      alert("게시글이 성공적으로 등록되었습니다!");
-      router.push('/posts');
+    // 💡 [정밀 수정 부문] 수정 모드일 때와 새 글 작성 모드일 때 요청 메서드(PUT/POST)와 주소를 분기합니다.
+    if (isEditMode.value) {
+      // 🟢 수정 모드: PUT 메서드를 이용해 해당 ID의 게시글을 수정 처리
+      const response = await axios.put(`${API_BASE}/api/posts/${route.params.id}`, putPayload);
+      
+      if (response.status === 200 || response.status === 204 || response.status === 201) {
+        alert("게시글이 성공적으로 수정되었습니다!");
+        router.push('/posts');
+      }
+    } else {
+      // 🟢 작성 모드: 기존의 POST 메서드를 이용해 새 게시글 등록
+      const response = await axios.post(`${API_BASE}/api/posts`, postPayload);
+      
+      if (response.status === 201) { // 생성 성공 시 201 상태코드 반환 
+        alert("게시글이 성공적으로 등록되었습니다!");
+        router.push('/posts');
+      }
     }
   } catch (error) {
-    console.error("등록 실패 로그:", error);
+    console.error("등록/수정 실패 로그:", error);
     console.log(`${API_BASE}`, error.response?.data);
-    alert("서버 연결에 실패했거나 데이터 전송 오류가 발생했습니다.");
+    alert(error.response?.data?.message || "서버 연결에 실패했거나 데이터 전송 오류가 발생했습니다.");
   }
 };
 </script>
